@@ -18,6 +18,7 @@ public class SimpleShell{
                 System.out.println();
                 System.out.println("Commands:");
                 System.out.println("1) exit ");
+                System.out.println("2) cal \033[3mmath_expression_here\033[0m");
                 System.out.println();
             }
             else System.out.println("Invalid command. Type 'help' to see a list of commands.");
