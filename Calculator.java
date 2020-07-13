@@ -9,21 +9,25 @@ import lib.*;
 public class Calculator {
     private String input;
     private ArrayList<String> tok;
-    private String output;
     private LinkedList<String> rpn;  // shunting yard algorithm output (Reverse Polish Notation/Postfix Notation)
 
     Calculator(String s) {
         this.input = s;
     }
 
-    public LinkedList<String> evaluate() throws InvalidMathExpression {
+    public String evaluate() throws InvalidMathExpression,NumberFormatException,ArithmeticException {
+        if(this.input.equals("help")){
+            return "Supported characters are +,-,*,/,(,),digits and decimal points(.) .\nWrap negative numbers in parenthesis (eg, use (-9) instead of -9)\nUse multiplication sign for multiplication (eg, use 9*7 instead of (9)(7)\nAvoid unnecessary zeroes (eg, use 8 instead of 08)";
+        }
         // 1. tokenise
         this.tok = this.tokeniser();
         // 1b. handle negative numbers eg, (-9.0) -> -9.0
         this.tok = this.handleNeg();
         // 2. shunting yard algorithm
         this.rpn = this.SYA();
-        return this.rpn;
+        // 3. postfix
+        String output = PostfixStackEvaluator();
+        return output;
     }
 
     private ArrayList<String> tokeniser() throws InvalidMathExpression {
@@ -49,7 +53,6 @@ public class Calculator {
         ArrayList<String> prc = new ArrayList<>();
         for(String ele: this.tok){
             if (StringUtils.contains(ele,"(")&&StringUtils.contains(ele,")")){ 
-            System.out.println("in");
             prc.add(ele.substring(1,ele.length()-1));
             }
             else{
@@ -64,9 +67,9 @@ public class Calculator {
         Stack<String> stack = new Stack<>(); // Stack: LIFO
         LinkedList<String> queue = new LinkedList<>(); // Queue: FIFO
         for (String ele: this.tok) {
-            System.out.println("Main token: "+ele);
-            System.out.println("Stack: "+Arrays.toString(stack.toArray()));
-            System.out.println("Queue: "+Arrays.toString(queue.toArray()));
+            //System.out.println("Main token: "+ele);
+            //System.out.println("Stack: "+Arrays.toString(stack.toArray()));
+            //System.out.println("Queue: "+Arrays.toString(queue.toArray()));
 
             // number
             if (NumberUtils.isCreatable(ele)) queue.add(ele);
@@ -111,7 +114,7 @@ public class Calculator {
             }
         }
         
-        System.out.println(Arrays.toString(stack.toArray()));
+        //System.out.println(Arrays.toString(stack.toArray()));
         // end of all input tokens
         while(stack.size()!=0){
             if(stack.peek().equals("(")||stack.peek().equals(")")) throw new InvalidMathExpression("Mismatched Parenthesis.");
@@ -120,19 +123,60 @@ public class Calculator {
         return queue;
     }
 
-    public static void main(String[] args) {
-        // System.out.println(NumberUtils.isCreatable("-9"));
-        // System.out.println(Double.parseDouble("-6"));
-        // System.out.println(StringUtils.contains("+-/*^", "+"));
-        // System.out.println(StringUtils.contains("+-/*^", "="));
-        String s = "99*( ( 33.5+45*(-2))+35+(-9.0))-7/(2^2)(5)";
-        Calculator c = new Calculator(s);
-        try{        
-            System.out.println(c.evaluate());
-        }catch (InvalidMathExpression e){
-            System.out.println(e.getMessage());
+    private String PostfixStackEvaluator() throws InvalidMathExpression,NumberFormatException,ArithmeticException{
+        Stack<String> stack = new Stack<>(); // Stack: LIFO
+        for(int i = 0; i<this.rpn.size();i++){
+            String ele = this.rpn.get(i);
+            // number
+            if (NumberUtils.isCreatable(ele)) stack.push(ele);
+            // operator
+            else if (StringUtils.contains("+-/*^", ele)) {
+                if(stack.size()<2) throw new InvalidMathExpression("Missing number argument.");
+                String secondarg = stack.pop();
+                Double result;
+                if(ele.equals("+")){
+                    result = Double.parseDouble(stack.pop()) + Double.parseDouble(secondarg);  
+                }
+                else if(ele.equals("-")){
+                    result = Double.parseDouble(stack.pop()) - Double.parseDouble(secondarg);  
+                }
+                else if(ele.equals("/")){
+                    result = Double.parseDouble(stack.pop()) / Double.parseDouble(secondarg);  
+                }
+                else if(ele.equals("*")){
+                    result = Double.parseDouble(stack.pop()) * Double.parseDouble(secondarg);  
+                }
+                else{ //ele.equals("^")
+                    result = Math.pow(Double.parseDouble(stack.pop()), Double.parseDouble(secondarg));  
+                }
+                stack.push(result.toString());
+
+                // last token in RPN is always an operator and only a digit remains in stack
+                if(i==this.rpn.size()-1){  // the last token
+                    if(stack.size()==1&&NumberUtils.isCreatable(stack.peek())){
+                        return stack.pop();
+                    }
+                }
+
+            }
         }
+        // reached outside for loop without returning -> the last token is not an operator
+        throw new InvalidMathExpression("Missing operator.");
+        //return null;
     }
+    // public static void main(String[] args) {
+    //     // System.out.println(NumberUtils.isCreatable("-9"));
+    //      //System.out.println(9/0);
+    //     // System.out.println(StringUtils.contains("+-/*^", "+"));
+    //     // System.out.println(StringUtils.contains("+-/*^", "="));
+    //     String s = "99*( ( 33.5+45*(-2))+35+(-9.0))-7/(2^(-6))*(5)-4";
+    //     Calculator c = new Calculator(s);
+    //     try{        
+    //         System.out.println(c.evaluate());
+    //     }catch (Exception e){
+    //         System.out.println(e.getMessage());
+    //     }
+    // }
 }
 
 class InvalidMathExpression extends Exception {
